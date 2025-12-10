@@ -9,6 +9,17 @@ let volume = 0;
 let v;
 let ease = 0.08
 
+//platform
+class Platform {
+  constructor(x, y, width, height) {
+    this.x = x;   
+    this.y = y;       
+    this.width = width; 
+    this.height = height;
+  }
+}
+let platforms = [];
+
 const vertexSrc = `#version 300 es
 precision mediump float;
 
@@ -78,6 +89,7 @@ async function setup() {
   // this creates an audio input and starts it
   mic = new p5.AudioIn();
   mic.start();
+  initPlatforms();
 }
 
 function draw() {
@@ -89,8 +101,10 @@ function draw() {
   // smooths volume
   // referenced from https://editor.p5js.org/rosepkid/sketches/yscax5lTQ
   volume += (v - volume) * ease;
-  playerX += volume * 0.1;
+  playerX += volume * 0.5;
   console.log(volume);
+  updatePlatforms();
+
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); //clear the screen to default color
   gl.enable(gl.DEPTH_TEST);
@@ -104,13 +118,13 @@ function draw() {
   const proj = glMatrix.mat4.create();
   const FOV = (45 * Math.PI) / 180;
   glMatrix.mat4.perspective(proj, FOV, width / height, 0.1, 50.0);
-
+  
   //view matrix (camera)
   const view = glMatrix.mat4.create();
   glMatrix.mat4.lookAt(
     view,
-    [0, 5, 10], //camera position
-    [0, 0, 0], //look at
+    [playerX, 0, 10], //camera position
+    [playerX, 0, 0], //look at
     [0, 1, 0] //up
   );
 
@@ -120,24 +134,29 @@ function draw() {
   const uniProj = gl.getUniformLocation(texturedShader, "proj");
   const uniColor = gl.getUniformLocation(texturedShader, "inColor");
 
-  //upload the view and projection matrix
+  // //upload the view and projection matrix
   gl.uniformMatrix4fv(uniView, false, view);
   gl.uniformMatrix4fv(uniProj, false, proj);
 
   //draw the platform
+  for (let p of platforms) {
   const modelPlatform = glMatrix.mat4.create();
-  glMatrix.mat4.translate(modelPlatform, modelPlatform, [-6, -4, 0]);
-  glMatrix.mat4.scale(modelPlatform, modelPlatform, [10, 4, 1]);
-  gl.uniform3fv(uniColor, [0.25, 0.25, 0.25]); //dark gray
+  const platformBottom = -4.5;
+  const yCenter = platformBottom + p.height / 2;
+  glMatrix.mat4.translate(modelPlatform, modelPlatform, [p.x, yCenter, 0]);
+  glMatrix.mat4.scale(modelPlatform, modelPlatform, [p.width, p.height, 1]);
+
+  gl.uniform3fv(uniColor, [0.25, 0.25, 0.25]);
 
   //position platform based on map position
   gl.uniformMatrix4fv(uniModel, false, modelPlatform);
   const platformSec = model.modelData.platform;
   gl.drawArrays(gl.TRIANGLES, platformSec.start, platformSec.count);
+}
 
   //draw player
   const modelPlayer = glMatrix.mat4.create();
-  glMatrix.mat4.translate(modelPlayer, modelPlayer, [playerX, -1.5 + (volume * 10), 0]);
+  glMatrix.mat4.translate(modelPlayer, modelPlayer, [playerX, (volume * 10), 0]);
   glMatrix.mat4.scale(modelPlayer, modelPlayer, [1, 1, 1]);
   gl.uniform3fv(uniColor, [0.8, 0.3, 0.4]); //pink
   // gl.uniform3fv(uniColor, [volume * 5, volume * 5, volume * 5]); // testing audio
@@ -262,4 +281,38 @@ function checkCollision(){
 //user clicks and then it starts
 function mousePressed(){
   userStartAudio();
+}
+
+function initPlatforms() {
+  platforms.push(new Platform(-14, 0, 15, 4)); //push the initial platofrm the player stands on
+  let x = platforms[0].x + platforms[0].width;
+  //render other platforms to fill the screen
+  while (x < width) {
+    const w = random(2, 5);
+    const h = 3 + random(-1, 2);
+    platforms.push(new Platform(x, 0, w, h));
+    const gap = random(2, 3);
+    x += w + gap;
+  }
+}
+
+function updatePlatforms() {
+  //adds new platform on the screen
+  const lastPlatform = platforms[platforms.length - 1];
+  const platformEdge = lastPlatform.x + lastPlatform.width;
+  const screenRightEdge = playerX + width;
+  while (platformEdge < screenRightEdge) {
+    const last = platforms[platforms.length - 1];
+    const w = random(2, 5);
+    const h = 3 + random(-1, 2);
+    const gap = random(2, 3);
+    platforms.push(new Platform(last.x + last.width + gap, 0, w, h));
+  }
+
+  //remove platforms that are off-screen
+  const leftMostPlatform = platforms[0].x + platforms[0].width;
+  const screenLeftEdge = playerX - width;
+  while (platforms.length && leftMostPlatform < screenLeftEdge) {
+    platforms.splice(0, 1);
+  }
 }
