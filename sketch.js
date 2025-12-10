@@ -2,6 +2,11 @@ let gl;
 let texturedShader;
 let model = null;
 let playerX = -8;
+let showSplash = true;
+
+//fonts
+let font1;
+let font2;
 
 // audio variables
 let mic;
@@ -73,6 +78,11 @@ void main() {
 }
 `;
 
+function preload() {
+  font1 = loadFont('assets/fonts/Nabla-Regular-VariableFont_EDPT,EHLT.ttf');
+  font2 = loadFont('assets/fonts/PressStart2P-Regular.ttf');
+}
+
 async function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
   gl = drawingContext; //grab the WebGL context from p5.js
@@ -94,6 +104,11 @@ async function setup() {
 
 function draw() {
   background(220); //default background
+  
+  if (showSplash) {
+    splashScreen(); 
+    return;
+  }
 
   if (!mic) return;
 
@@ -108,7 +123,8 @@ function draw() {
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); //clear the screen to default color
   gl.enable(gl.DEPTH_TEST);
-  gl.viewport(0, 0, width, height);
+  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+
 
   if (!model) return;
   gl.useProgram(texturedShader);
@@ -167,6 +183,30 @@ function draw() {
   gl.drawArrays(gl.TRIANGLES, playerSec.start, playerSec.count);
 
   gl.bindVertexArray(null);
+}
+
+function splashScreen() {
+  background(0, 0, 0);
+
+  //title
+  fill('#D72638');
+  textSize(100);
+  textFont(font1);
+  textAlign(CENTER, CENTER);
+  text("JUMPING TARCY", 0, -height/4);
+
+  //credits
+  fill('#e24c6fff');
+  textSize(10);
+  textFont(font2);
+  text("BY: MARY AND TRACY", 0, -height/10);
+
+  //start
+  fill('#f57887ff');
+  textSize(25);
+  textFont(font2);
+  text("Click to Start", 0,  height/4);
+
 }
 
 async function loadTxtModel(filename) {
@@ -280,6 +320,9 @@ function checkCollision(){
 //need this function so that the mic can start registering input
 //user clicks and then it starts
 function mousePressed(){
+   if (showSplash) {
+    showSplash = false; 
+  }
   userStartAudio();
 }
 
