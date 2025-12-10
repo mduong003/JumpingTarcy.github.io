@@ -1,6 +1,13 @@
 let gl;
 let texturedShader;
 let model = null;
+let playerX = -8;
+
+// audio variables
+let mic;
+let volume = 0;
+let v;
+let ease = 0.08
 
 const vertexSrc = `#version 300 es
 precision mediump float;
@@ -67,10 +74,23 @@ async function setup() {
   const { buffer, modelData } = loadAllModels(models);
   const vao = createVAO(buffer, texturedShader); //create VAO to load all the vertex attributes (postion, texture coords, normals)
   model = { vao, modelData }; //save the vao and data for each model for rendering
+
+  // this creates an audio input and starts it
+  mic = new p5.AudioIn();
+  mic.start();
 }
 
 function draw() {
   background(220); //default background
+
+  if (!mic) return;
+
+  v = mic.getLevel();
+  // smooths volume
+  // referenced from https://editor.p5js.org/rosepkid/sketches/yscax5lTQ
+  volume += (v - volume) * ease;
+  playerX += volume * 0.1;
+  console.log(volume);
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); //clear the screen to default color
   gl.enable(gl.DEPTH_TEST);
@@ -117,9 +137,10 @@ function draw() {
 
   //draw player
   const modelPlayer = glMatrix.mat4.create();
-  glMatrix.mat4.translate(modelPlayer, modelPlayer, [-2, -1.5, 0]);
+  glMatrix.mat4.translate(modelPlayer, modelPlayer, [playerX, -1.5 + (volume * 10), 0]);
   glMatrix.mat4.scale(modelPlayer, modelPlayer, [1, 1, 1]);
   gl.uniform3fv(uniColor, [0.8, 0.3, 0.4]); //pink
+  // gl.uniform3fv(uniColor, [volume * 5, volume * 5, volume * 5]); // testing audio
 
   //position player based on map position
   gl.uniformMatrix4fv(uniModel, false, modelPlayer);
@@ -232,4 +253,13 @@ function initShader(vertexSrc, fragmentSrc) {
     console.error("Program link error:", gl.getProgramInfoLog(program));
 
   return program;
+}
+
+function checkCollision(){
+  // TO-DO: check if player's cube is overlapping with a platform geometry
+}
+//need this function so that the mic can start registering input
+//user clicks and then it starts
+function mousePressed(){
+  userStartAudio();
 }
