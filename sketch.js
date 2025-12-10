@@ -298,21 +298,15 @@ function initPlatforms() {
 
 function updatePlatforms() {
   //adds new platform on the screen
-  const lastPlatform = platforms[platforms.length - 1];
-  const platformEdge = lastPlatform.x + lastPlatform.width;
-  const screenRightEdge = playerX + width;
-  while (platformEdge < screenRightEdge) {
+  while (platforms[platforms.length - 1].x + platforms[platforms.length - 1].width < playerX + width) {
     const last = platforms[platforms.length - 1];
     const w = random(2, 5);
     const h = 3 + random(-1, 2);
     const gap = random(2, 3);
     platforms.push(new Platform(last.x + last.width + gap, 0, w, h));
   }
-
   //remove platforms that are off-screen
-  const leftMostPlatform = platforms[0].x + platforms[0].width;
-  const screenLeftEdge = playerX - width;
-  while (platforms.length && leftMostPlatform < screenLeftEdge) {
+  while (platforms.length && (platforms[0].x + platforms[0].width < playerX - 50)) {
     platforms.splice(0, 1);
   }
 }
