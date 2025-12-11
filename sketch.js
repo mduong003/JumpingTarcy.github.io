@@ -20,6 +20,11 @@ let volume = 0;
 let v;
 let ease = 0.15
 
+// game variable
+let score = 0;
+let maxX = -8;
+// let scoreText = document.getElementById("score")
+
 //platform
 class Platform {
   constructor(x, y, width, height) {
@@ -125,7 +130,7 @@ function draw() {
   
   // horizontal movement
   if (volume > 0.01){
-    velocityX += volume * 0.3;
+    velocityX += volume * 0.2;
   }
   else{
     if (isOnGround){
@@ -136,6 +141,13 @@ function draw() {
     }
   }
   playerX += velocityX;
+
+  // updating score 
+  if (playerX > maxX){
+    maxX = playerX;
+    score = Math.floor(maxX + 8);
+  }
+
   // vertical movement
   if (volume > 0.01){
     velocityY = volume * 10;
@@ -217,6 +229,7 @@ function draw() {
   gl.bindVertexArray(null);
 }
 
+// beginning splash screen
 function splashScreen() {
   background(0, 0, 0);
 
@@ -374,12 +387,12 @@ function checkCollision(){
         isOnGround = true;
         return;
       }
-
-      if (velocityX > 0 && playerRight >= playerLeft && playerRight <= platformLeft + 0.5){
+      // check if player is touching left side of platform
+      if (velocityX > 0 && playerRight >= platformLeft && playerRight <= platformLeft + 0.5){
         playerX = platformLeft - playerWidth / 2;
         velocityX = 0;
       }
-
+      // right side of platform
       if (velocityX < 0 && playerLeft <= platformRight && playerLeft >= platformRight - 0.5){
         playerX = platformRight + playerWidth / 2;
         velocityX = 0;
@@ -393,6 +406,8 @@ function checkCollision(){
     velocityX = 0;
     velocityY = 0;
     playerX = -8;
+    score = 0;
+    maxX = -8;
   }
 }
 
