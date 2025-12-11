@@ -1,18 +1,24 @@
 let gl;
 let texturedShader;
 let model = null;
-let playerX = -8;
 let showSplash = true;
 
 //fonts
 let font1;
 let font2;
 
+// player movement variables
+let playerX = -8;
+let playerY = 0;
+let velocityX = 0;
+let velocityY = 0;
+let isOnGround = false;
+
 // audio variables
 let mic;
 let volume = 0;
 let v;
-let ease = 0.08
+let ease = 0.15
 
 //platform
 class Platform {
@@ -116,8 +122,32 @@ function draw() {
   // smooths volume
   // referenced from https://editor.p5js.org/rosepkid/sketches/yscax5lTQ
   volume += (v - volume) * ease;
-  playerX += volume * 0.5;
-  console.log(volume);
+  
+  // horizontal movement
+  if (volume > 0.01){
+    velocityX += volume * 0.3;
+  }
+  else{
+    if (isOnGround){
+      velocityX *= 0.65;
+    }
+    else{
+      velocityX *= 0.98;
+    }
+  }
+  playerX += velocityX;
+  // vertical movement
+  if (volume > 0.01){
+    velocityY = volume * 10;
+  }
+  else{
+    velocityY = -0.3;
+  }
+
+  playerY += velocityY;
+
+  isOnGround = false;
+  checkCollision();
   updatePlatforms();
 
 
@@ -156,23 +186,25 @@ function draw() {
 
   //draw the platform
   for (let p of platforms) {
-  const modelPlatform = glMatrix.mat4.create();
-  const platformBottom = -4.5;
-  const yCenter = platformBottom + p.height / 2;
-  glMatrix.mat4.translate(modelPlatform, modelPlatform, [p.x, yCenter, 0]);
-  glMatrix.mat4.scale(modelPlatform, modelPlatform, [p.width, p.height, 1]);
+    // if a platform p is out of boudns of the window, don't render it
+    if (p.x + p.width < playerX - 20 || p.x > playerX + 20) continue; 
+    const modelPlatform = glMatrix.mat4.create();
+    const platformBottom = -4.5;
+    const yCenter = platformBottom + p.height / 2;
+    glMatrix.mat4.translate(modelPlatform, modelPlatform, [p.x, yCenter, 0]);
+    glMatrix.mat4.scale(modelPlatform, modelPlatform, [p.width, p.height, 1]);
 
-  gl.uniform3fv(uniColor, [0.25, 0.25, 0.25]);
+    gl.uniform3fv(uniColor, [0.25, 0.25, 0.25]);
 
-  //position platform based on map position
-  gl.uniformMatrix4fv(uniModel, false, modelPlatform);
-  const platformSec = model.modelData.platform;
-  gl.drawArrays(gl.TRIANGLES, platformSec.start, platformSec.count);
+    //position platform based on map position
+    gl.uniformMatrix4fv(uniModel, false, modelPlatform);
+    const platformSec = model.modelData.platform;
+    gl.drawArrays(gl.TRIANGLES, platformSec.start, platformSec.count);
 }
 
   //draw player
   const modelPlayer = glMatrix.mat4.create();
-  glMatrix.mat4.translate(modelPlayer, modelPlayer, [playerX, (volume * 10), 0]);
+  glMatrix.mat4.translate(modelPlayer, modelPlayer, [playerX, playerY, 0]);
   glMatrix.mat4.scale(modelPlayer, modelPlayer, [1, 1, 1]);
   gl.uniform3fv(uniColor, [0.8, 0.3, 0.4]); //pink
   // gl.uniform3fv(uniColor, [volume * 5, volume * 5, volume * 5]); // testing audio
@@ -316,7 +348,54 @@ function initShader(vertexSrc, fragmentSrc) {
 
 function checkCollision(){
   // TO-DO: check if player's cube is overlapping with a platform geometry
+  const playerWidth = 1;
+  const playerHeight = 1;
+  const playerLeft = playerX - playerWidth / 2;
+  const playerRight = playerX + playerWidth / 2;
+  const playerBottom = playerY - playerHeight / 2;
+  const playerTop = playerY + playerHeight / 2;
+
+  for (let p of platforms) {
+    const platformBottom = -4.5;
+    const platformTop = platformBottom + p.height;
+    const platformLeft = p.x - p.width / 2;
+    const platformRight = p.x + p.width / 2;
+    
+    // check if player overlaps with platform horizontally (top)
+    const overlapX = playerRight > platformLeft && playerLeft < platformRight;
+    // then vertically (left and right)
+    const overlapY = playerBottom < platformTop && playerTop > platformBottom;
+
+    if (overlapX && overlapY) {
+      // check if player is falling onto platform from above
+      if (velocityY < 0 && playerBottom <= platformTop && playerBottom >= platformTop - 0.5) {
+        playerY = platformTop + playerHeight / 2;
+        velocityY = 0;
+        isOnGround = true;
+        return;
+      }
+
+      if (velocityX > 0 && playerRight >= playerLeft && playerRight <= platformLeft + 0.5){
+        playerX = platformLeft - playerWidth / 2;
+        velocityX = 0;
+      }
+
+      if (velocityX < 0 && playerLeft <= platformRight && playerLeft >= platformRight - 0.5){
+        playerX = platformRight + playerWidth / 2;
+        velocityX = 0;
+      }
+    }
+  }
+  
+  // if player falls below screen, reset position
+  if (playerY < -10) {
+    playerY = 5;
+    velocityX = 0;
+    velocityY = 0;
+    playerX = -8;
+  }
 }
+
 //need this function so that the mic can start registering input
 //user clicks and then it starts
 function mousePressed(){
