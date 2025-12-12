@@ -22,6 +22,10 @@ let volume = 0;
 let v;
 let ease = 0.15;
 
+//game variable
+let score = 0;
+let maxX = -8;
+
 //platform
 class Platform {
   constructor(x, y, width, height, hasSpike, spikeOffset) {
@@ -130,7 +134,7 @@ function draw() {
 
   // horizontal movement
   if (volume > 0.01) {
-    velocityX += volume * 0.3;
+    velocityX += volume * 0.2;
   } else {
     if (isOnGround) {
       velocityX *= 0.65;
@@ -139,6 +143,12 @@ function draw() {
     }
   }
   playerX += velocityX;
+
+  //update score
+  if (playerX > maxX) {
+    maxX = playerX;
+    score = Math.floor(maxX + 8);
+  }
   // vertical movement
   if (volume > 0.01) {
     velocityY = volume * 5;
@@ -416,7 +426,7 @@ function checkCollision() {
         return;
       }
 
-      if (velocityX > 0 && playerRight >= playerLeft && playerRight <= platformLeft + 0.5) {
+      if (velocityX > 0 && playerRight >= platformRight && playerRight <= platformLeft + 0.5) {
         playerX = platformLeft - playerWidth / 2;
         velocityX = 0;
       }
@@ -451,6 +461,8 @@ function checkCollision() {
     velocityX = 0;
     velocityY = 0;
     playerX = -8;
+    score = 0;
+    maxX = 8;
     platforms = [];
     initPlatforms();
   }
@@ -474,7 +486,7 @@ function initPlatforms() {
     const h = 3 + random(-1, 2);
     const newPlatform = new Platform(x, 0, w, h);
     newPlatform.hasSpike = Math.random() < 0.4;
-    newPlatform.spikeOffset = random(0.5, w - 0.5);
+    newPlatform.spikeOffset = random(0.1, Math.max(w - 0.1, 0.1));
     platforms.push(newPlatform);
     const gap = random(2, 3);
     x += w + gap;
@@ -490,7 +502,7 @@ function updatePlatforms() {
     const gap = random(2, 3);
     const newPlatform = new Platform(last.x + last.width + gap, 0, w, h);
     newPlatform.hasSpike = Math.random() < 0.4;
-    newPlatform.spikeOffset = random(0.5, w - 0.5);
+    newPlatform.spikeOffset = random(0.1, Math.max(w - 0.1, 0.1));
     platforms.push(newPlatform);
   }
   //remove platforms that are off-screen
