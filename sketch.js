@@ -126,6 +126,7 @@ function draw() {
 
   if (showSplash) {
     splashScreen();
+    scoreBoard.style.display = "none";
     return;
   }
 
@@ -197,7 +198,7 @@ function draw() {
   const uniProj = gl.getUniformLocation(texturedShader, "proj");
   const uniColor = gl.getUniformLocation(texturedShader, "inColor");
 
-  // //upload the view and projection matrix
+  //upload the view and projection matrix
   gl.uniformMatrix4fv(uniView, false, view);
   gl.uniformMatrix4fv(uniProj, false, proj);
 
@@ -450,6 +451,7 @@ function checkCollision() {
         velocityX = 0;
       }
     }
+    //check if a platform has a spike
     if (p.hasSpike) {
       const spikeW = 0.3;
       const spikeH = 0.3;
