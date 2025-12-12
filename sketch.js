@@ -477,7 +477,7 @@ function checkCollision() {
     velocityX = 0;
     velocityY = 0;
     playerX = -8;
-    score = -1;
+    score = 0;
     platforms = [];
     initPlatforms();
   }
