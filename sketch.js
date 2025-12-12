@@ -23,9 +23,9 @@ let v;
 let ease = 0.08
 
 // game variable
-let score = 0;
-let maxX = -8;
-// let scoreText = document.getElementById("score")
+let score = -1;
+let scoreBoard;
+let scoreText;
 
 //platform
 class Platform {
@@ -36,6 +36,7 @@ class Platform {
     this.height = height;
     this.hasSpike = hasSpike;
     this.spikeOffset = spikeOffset;
+    this.point = false;
   }
 }
 let platforms = [];
@@ -99,6 +100,8 @@ function preload() {
 }
 
 async function setup() {
+  scoreBoard = document.getElementById("scoreboard")
+  scoreText = document.getElementById("score")
   createCanvas(windowWidth, windowHeight, WEBGL);
   gl = drawingContext; //grab the WebGL context from p5.js
   texturedShader = initShader(vertexSrc, fragmentSrc);
@@ -119,7 +122,7 @@ async function setup() {
 }
 
 function draw() {
-  background(220); //default background
+  background(157, 211, 242); //blue background to emulate the sky :^)
 
   if (showSplash) {
     splashScreen();
@@ -136,7 +139,7 @@ function draw() {
   // horizontal movement
   // if (volume > 0.02){ only uncomment this when on a laptop with a bad mic
   if (volume > 0.01){
-    velocityX += volume * 0.05;
+    velocityX += volume * 0.03;
   }
   else{
     if (isOnGround){
@@ -148,19 +151,13 @@ function draw() {
   velocityX = constrain(velocityX, -0.25, 0.25); // limit top speed
   playerX += velocityX;
 
-  // updating score 
-  if (playerX > maxX){
-    maxX = playerX;
-    score = Math.floor(maxX + 8);
-  }
-
   // vertical movement
   // if (volume > 0.02){ only uncomment this when on a laptop with a bad mic
   if (volume > 0.01){
-    velocityY = min(volume * 10, 0.35);
+    velocityY = min(volume * 5, 0.35);
   }
   else{
-    velocityY = -0.15;
+    velocityY = -0.10;
   }
 
   playerY += velocityY;
@@ -169,6 +166,8 @@ function draw() {
   isOnGround = false;
   checkCollision();
   updatePlatforms();
+
+  if (scoreText) scoreText.innerText = `${score}`
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); //clear the screen to default color
   gl.enable(gl.DEPTH_TEST);
@@ -212,7 +211,9 @@ function draw() {
     glMatrix.mat4.translate(modelPlatform, modelPlatform, [p.x, yCenter, 0]);
     glMatrix.mat4.scale(modelPlatform, modelPlatform, [p.width, p.height, 1]);
 
-    gl.uniform3fv(uniColor, [0.25, 0.25, 0.25]);
+    // gl.uniform3fv(uniColor, [0.25, 0.25, 0.25]);
+    if (!p.point) gl.uniform3fv(uniColor, [0.25, 0.25, 0.25]);
+    else gl.uniform3fv(uniColor, [0.95, 0.75, 1])
 
     //position platform based on map position
     gl.uniformMatrix4fv(uniModel, false, modelPlatform);
@@ -432,6 +433,10 @@ function checkCollision() {
         playerY = platformTop + playerHeight / 2;
         velocityY = 0;
         isOnGround = true;
+        if (!p.point){
+          p.point = true;
+          score += 1;
+        }
         return;
       }
       // check if player is touching left side of platform
@@ -470,8 +475,7 @@ function checkCollision() {
     velocityX = 0;
     velocityY = 0;
     playerX = -8;
-    score = 0;
-    maxX = -8;
+    score = -1;
     platforms = [];
     initPlatforms();
   }
@@ -483,6 +487,7 @@ function mousePressed() {
   if (showSplash) {
     showSplash = false;
   }
+  scoreBoard.style.display = "block";
   userStartAudio();
 }
 
