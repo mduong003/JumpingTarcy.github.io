@@ -1,6 +1,8 @@
 let gl;
 let texturedShader;
 let model = null;
+
+//splash
 let showSplash = true;
 
 //fonts
@@ -18,15 +20,17 @@ let isOnGround = false;
 let mic;
 let volume = 0;
 let v;
-let ease = 0.15
+let ease = 0.15;
 
 //platform
 class Platform {
-  constructor(x, y, width, height) {
-    this.x = x;   
-    this.y = y;       
-    this.width = width; 
+  constructor(x, y, width, height, hasSpike, spikeOffset) {
+    this.x = x;
+    this.y = y;
+    this.width = width;
     this.height = height;
+    this.hasSpike = hasSpike;
+    this.spikeOffset = spikeOffset;
   }
 }
 let platforms = [];
@@ -85,8 +89,8 @@ void main() {
 `;
 
 function preload() {
-  font1 = loadFont('assets/fonts/Nabla-Regular-VariableFont_EDPT,EHLT.ttf');
-  font2 = loadFont('assets/fonts/PressStart2P-Regular.ttf');
+  font1 = loadFont("assets/fonts/Nabla-Regular-VariableFont_EDPT,EHLT.ttf");
+  font2 = loadFont("assets/fonts/PressStart2P-Regular.ttf");
 }
 
 async function setup() {
@@ -96,7 +100,8 @@ async function setup() {
 
   const platform = await loadTxtModel("models/platform.txt");
   const player = await loadTxtModel("models/player.txt");
-  const models = { platform, player };
+  const spike = await loadOBJModel("models/pyramid.obj");
+  const models = { platform, player, spike };
 
   const { buffer, modelData } = loadAllModels(models);
   const vao = createVAO(buffer, texturedShader); //create VAO to load all the vertex attributes (postion, texture coords, normals)
@@ -110,9 +115,9 @@ async function setup() {
 
 function draw() {
   background(220); //default background
-  
+
   if (showSplash) {
-    splashScreen(); 
+    splashScreen();
     return;
   }
 
@@ -122,25 +127,22 @@ function draw() {
   // smooths volume
   // referenced from https://editor.p5js.org/rosepkid/sketches/yscax5lTQ
   volume += (v - volume) * ease;
-  
+
   // horizontal movement
-  if (volume > 0.01){
+  if (volume > 0.01) {
     velocityX += volume * 0.3;
-  }
-  else{
-    if (isOnGround){
+  } else {
+    if (isOnGround) {
       velocityX *= 0.65;
-    }
-    else{
+    } else {
       velocityX *= 0.98;
     }
   }
   playerX += velocityX;
   // vertical movement
-  if (volume > 0.01){
-    velocityY = volume * 10;
-  }
-  else{
+  if (volume > 0.01) {
+    velocityY = volume * 5;
+  } else {
     velocityY = -0.3;
   }
 
@@ -150,11 +152,9 @@ function draw() {
   checkCollision();
   updatePlatforms();
 
-
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); //clear the screen to default color
   gl.enable(gl.DEPTH_TEST);
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-
 
   if (!model) return;
   gl.useProgram(texturedShader);
@@ -164,7 +164,7 @@ function draw() {
   const proj = glMatrix.mat4.create();
   const FOV = (45 * Math.PI) / 180;
   glMatrix.mat4.perspective(proj, FOV, width / height, 0.1, 50.0);
-  
+
   //view matrix (camera)
   const view = glMatrix.mat4.create();
   glMatrix.mat4.lookAt(
@@ -187,7 +187,7 @@ function draw() {
   //draw the platform
   for (let p of platforms) {
     // if a platform p is out of boudns of the window, don't render it
-    if (p.x + p.width < playerX - 20 || p.x > playerX + 20) continue; 
+    if (p.x + p.width < playerX - 20 || p.x > playerX + 20) continue;
     const modelPlatform = glMatrix.mat4.create();
     const platformBottom = -4.5;
     const yCenter = platformBottom + p.height / 2;
@@ -200,7 +200,12 @@ function draw() {
     gl.uniformMatrix4fv(uniModel, false, modelPlatform);
     const platformSec = model.modelData.platform;
     gl.drawArrays(gl.TRIANGLES, platformSec.start, platformSec.count);
-}
+
+    //draw spike
+    if (p.hasSpike) {
+      drawSpike(p, uniModel, uniColor);
+    }
+  }
 
   //draw player
   const modelPlayer = glMatrix.mat4.create();
@@ -221,24 +226,23 @@ function splashScreen() {
   background(0, 0, 0);
 
   //title
-  fill('#D72638');
+  fill("#D72638");
   textSize(100);
   textFont(font1);
   textAlign(CENTER, CENTER);
-  text("JUMPING TARCY", 0, -height/4);
+  text("JUMPING TARCY", 0, -height / 4);
 
   //credits
-  fill('#e24c6fff');
+  fill("#e24c6fff");
   textSize(10);
   textFont(font2);
-  text("BY: MARY AND TRACY", 0, -height/10);
+  text("BY: MARY AND TRACY", 0, -height / 10);
 
   //start
-  fill('#f57887ff');
+  fill("#f57887ff");
   textSize(25);
   textFont(font2);
-  text("Click to Start", 0,  height/4);
-
+  text("Click to Start", 0, height / 4);
 }
 
 async function loadTxtModel(filename) {
@@ -259,6 +263,43 @@ async function loadTxtModel(filename) {
   const vertices = new Float32Array(modelData);
   const numVerts = numLines / 8;
   return { vertices, numVerts };
+}
+
+async function loadOBJModel(filename) {
+  const file = await fetch(filename);
+  const objText = await file.text();
+
+  const mesh = new OBJ.Mesh(objText);
+  const vertexCount = mesh.vertices.length / 3;
+  const vertices = new Float32Array(vertexCount * 8);
+
+  //obtain the 8 vertex floats (x y z u v nx ny nz) from the .obj file
+  for (let i = 0; i < vertexCount; i++) {
+    const px = mesh.vertices[i * 3 + 0];
+    const py = mesh.vertices[i * 3 + 1];
+    const pz = mesh.vertices[i * 3 + 2];
+
+    const u = mesh.textures[i * 2 + 0] || 0;
+    const v = mesh.textures[i * 2 + 1] || 0;
+
+    const nx = mesh.vertexNormals[i * 3 + 0] || 0;
+    const ny = mesh.vertexNormals[i * 3 + 1] || 0;
+    const nz = mesh.vertexNormals[i * 3 + 2] || 0;
+
+    //store the 8 vertices in the correct format
+    const base = i * 8;
+    vertices[base + 0] = px;
+    vertices[base + 1] = py;
+    vertices[base + 2] = pz;
+
+    vertices[base + 3] = u;
+    vertices[base + 4] = v;
+
+    vertices[base + 5] = nx;
+    vertices[base + 6] = ny;
+    vertices[base + 7] = nz;
+  }
+  return { vertices, numVerts: vertexCount };
 }
 
 function loadAllModels(models) {
@@ -328,8 +369,8 @@ function initShader(vertexSrc, fragmentSrc) {
   //load fragment shader
   gl.shaderSource(fragmentShader, fragmentSrc);
   gl.compileShader(fragmentShader);
-  if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS))
-    console.error("Fragment shader error:",gl.getShaderInfoLog(fragmentShader));
+  if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) 
+    console.error("Fragment shader error:", gl.getShaderInfoLog(fragmentShader));
 
   //create the program
   const program = gl.createProgram();
@@ -346,21 +387,21 @@ function initShader(vertexSrc, fragmentSrc) {
   return program;
 }
 
-function checkCollision(){
-  // TO-DO: check if player's cube is overlapping with a platform geometry
+function checkCollision() {
   const playerWidth = 1;
   const playerHeight = 1;
   const playerLeft = playerX - playerWidth / 2;
   const playerRight = playerX + playerWidth / 2;
   const playerBottom = playerY - playerHeight / 2;
   const playerTop = playerY + playerHeight / 2;
+  let hitSpike = false;
 
   for (let p of platforms) {
     const platformBottom = -4.5;
     const platformTop = platformBottom + p.height;
     const platformLeft = p.x - p.width / 2;
     const platformRight = p.x + p.width / 2;
-    
+
     // check if player overlaps with platform horizontally (top)
     const overlapX = playerRight > platformLeft && playerLeft < platformRight;
     // then vertically (left and right)
@@ -375,32 +416,51 @@ function checkCollision(){
         return;
       }
 
-      if (velocityX > 0 && playerRight >= playerLeft && playerRight <= platformLeft + 0.5){
+      if (velocityX > 0 && playerRight >= playerLeft && playerRight <= platformLeft + 0.5) {
         playerX = platformLeft - playerWidth / 2;
         velocityX = 0;
       }
 
-      if (velocityX < 0 && playerLeft <= platformRight && playerLeft >= platformRight - 0.5){
+      if (velocityX < 0 && playerLeft <= platformRight && playerLeft >= platformRight - 0.5) {
         playerX = platformRight + playerWidth / 2;
         velocityX = 0;
       }
     }
+    if (p.hasSpike) {
+      const spikeW = 0.3;
+      const spikeH = 0.3;
+      const spikeX = p.x + (p.spikeOffset - p.width / 2);
+      const spikeY = p.height + -4.5;
+
+      //spike hitbox area
+      const spikeLeft = spikeX - spikeW / 2;
+      const spikeRight = spikeX + spikeW / 2;
+      const spikeBottom = spikeY;
+      const spikeTop = spikeY + spikeH;
+      
+      // if player touches the spike
+      if (playerRight > spikeLeft && playerLeft < spikeRight && playerTop > spikeBottom && playerBottom < spikeTop) {
+        hitSpike = true;
+      }
+    }
   }
-  
-  // if player falls below screen, reset position
-  if (playerY < -10) {
+
+  // if player falls below screen or hits the spikes, reset position and respawn platforms randomly
+  if (playerY < -10 || hitSpike) {
     playerY = 5;
     velocityX = 0;
     velocityY = 0;
     playerX = -8;
+    platforms = [];
+    initPlatforms();
   }
 }
 
 //need this function so that the mic can start registering input
 //user clicks and then it starts
-function mousePressed(){
-   if (showSplash) {
-    showSplash = false; 
+function mousePressed() {
+  if (showSplash) {
+    showSplash = false;
   }
   userStartAudio();
 }
@@ -410,9 +470,12 @@ function initPlatforms() {
   let x = platforms[0].x + platforms[0].width;
   //render other platforms to fill the screen
   while (x < width) {
-    const w = random(2, 5);
+    const w = random(3, 6);
     const h = 3 + random(-1, 2);
-    platforms.push(new Platform(x, 0, w, h));
+    const newPlatform = new Platform(x, 0, w, h);
+    newPlatform.hasSpike = Math.random() < 0.4;
+    newPlatform.spikeOffset = random(0.5, w - 0.5);
+    platforms.push(newPlatform);
     const gap = random(2, 3);
     x += w + gap;
   }
@@ -422,13 +485,32 @@ function updatePlatforms() {
   //adds new platform on the screen
   while (platforms[platforms.length - 1].x + platforms[platforms.length - 1].width < playerX + width) {
     const last = platforms[platforms.length - 1];
-    const w = random(2, 5);
+    const w = random(3, 6);
     const h = 3 + random(-1, 2);
     const gap = random(2, 3);
-    platforms.push(new Platform(last.x + last.width + gap, 0, w, h));
+    const newPlatform = new Platform(last.x + last.width + gap, 0, w, h);
+    newPlatform.hasSpike = Math.random() < 0.4;
+    newPlatform.spikeOffset = random(0.5, w - 0.5);
+    platforms.push(newPlatform);
   }
   //remove platforms that are off-screen
-  while (platforms.length && (platforms[0].x + platforms[0].width < playerX - 50)) {
+  while (platforms.length && platforms[0].x + platforms[0].width < playerX - width) {
     platforms.splice(0, 1);
   }
+}
+
+function drawSpike(platform, uniModel, uniColor) {
+  //position spike on platform surface
+  const spikeX = platform.x + (platform.spikeOffset - platform.width / 2);
+  const spikeY = platform.height + -4.5;
+
+  //draw spike
+  const spikeModel = glMatrix.mat4.create();
+  glMatrix.mat4.translate(spikeModel, spikeModel, [spikeX, spikeY, 0]);
+  glMatrix.mat4.scale(spikeModel, spikeModel, [0.2, 0.2, 0.2]);
+  gl.uniform3fv(uniColor, [0.5, 0.0, 0.0]);
+
+  gl.uniformMatrix4fv(uniModel, false, spikeModel);
+  const spikeSec = model.modelData.spike;
+  gl.drawArrays(gl.TRIANGLES, spikeSec.start, spikeSec.count);
 }
