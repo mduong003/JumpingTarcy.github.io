@@ -20,11 +20,12 @@ let isOnGround = false;
 let mic;
 let volume = 0;
 let v;
-let ease = 0.15;
+let ease = 0.08
 
-//game variable
+// game variable
 let score = 0;
 let maxX = -8;
+// let scoreText = document.getElementById("score")
 
 //platform
 class Platform {
@@ -133,30 +134,37 @@ function draw() {
   volume += (v - volume) * ease;
 
   // horizontal movement
-  if (volume > 0.01) {
-    velocityX += volume * 0.2;
-  } else {
-    if (isOnGround) {
+  // if (volume > 0.02){ only uncomment this when on a laptop with a bad mic
+  if (volume > 0.01){
+    velocityX += volume * 0.05;
+  }
+  else{
+    if (isOnGround){
       velocityX *= 0.65;
     } else {
       velocityX *= 0.98;
     }
   }
+  velocityX = constrain(velocityX, -0.25, 0.25); // limit top speed
   playerX += velocityX;
 
-  //update score
-  if (playerX > maxX) {
+  // updating score 
+  if (playerX > maxX){
     maxX = playerX;
     score = Math.floor(maxX + 8);
   }
+
   // vertical movement
-  if (volume > 0.01) {
-    velocityY = volume * 5;
-  } else {
-    velocityY = -0.3;
+  // if (volume > 0.02){ only uncomment this when on a laptop with a bad mic
+  if (volume > 0.01){
+    velocityY = min(volume * 10, 0.35);
+  }
+  else{
+    velocityY = -0.15;
   }
 
   playerY += velocityY;
+  playerY = constrain(playerY, -13, 4);
 
   isOnGround = false;
   checkCollision();
@@ -232,6 +240,7 @@ function draw() {
   gl.bindVertexArray(null);
 }
 
+// beginning splash screen
 function splashScreen() {
   background(0, 0, 0);
 
@@ -425,13 +434,13 @@ function checkCollision() {
         isOnGround = true;
         return;
       }
-
-      if (velocityX > 0 && playerRight >= platformRight && playerRight <= platformLeft + 0.5) {
+      // check if player is touching left side of platform
+      if (velocityX > 0 && playerRight >= platformLeft && playerRight <= platformLeft + 0.5){
         playerX = platformLeft - playerWidth / 2;
         velocityX = 0;
       }
-
-      if (velocityX < 0 && playerLeft <= platformRight && playerLeft >= platformRight - 0.5) {
+      // right side of platform
+      if (velocityX < 0 && playerLeft <= platformRight && playerLeft >= platformRight - 0.5){
         playerX = platformRight + playerWidth / 2;
         velocityX = 0;
       }
@@ -462,7 +471,7 @@ function checkCollision() {
     velocityY = 0;
     playerX = -8;
     score = 0;
-    maxX = 8;
+    maxX = -8;
     platforms = [];
     initPlatforms();
   }
