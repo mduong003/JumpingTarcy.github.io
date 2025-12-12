@@ -18,7 +18,7 @@ let isOnGround = false;
 let mic;
 let volume = 0;
 let v;
-let ease = 0.15
+let ease = 0.08
 
 // game variable
 let score = 0;
@@ -129,7 +129,7 @@ function draw() {
   volume += (v - volume) * ease;
   
   // horizontal movement
-  if (volume > 0.01){
+  if (volume > 0.02){
     velocityX += volume * 0.2;
   }
   else{
@@ -140,6 +140,7 @@ function draw() {
       velocityX *= 0.98;
     }
   }
+  velocityX = constrain(velocityX, -0.25, 0.25); // limit top speed
   playerX += velocityX;
 
   // updating score 
@@ -149,14 +150,15 @@ function draw() {
   }
 
   // vertical movement
-  if (volume > 0.01){
-    velocityY = volume * 10;
+  if (volume > 0.02){
+    velocityY = min(volume * 10, 0.35);
   }
   else{
-    velocityY = -0.3;
+    velocityY = -0.45;
   }
 
   playerY += velocityY;
+  playerY = constrain(playerY, -11, 4.5);
 
   isOnGround = false;
   checkCollision();
