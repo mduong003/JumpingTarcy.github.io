@@ -517,8 +517,8 @@ function initPlatforms() {
     const w = random(3, 6);
     const h = 3 + random(-1, 2);
     const newPlatform = new Platform(x, 0, w, h);
-    newPlatform.hasSpike = Math.random() < 0.4;
-    newPlatform.spikeOffset = random(0.1, Math.max(w - 0.1, 0.1));
+    newPlatform.hasSpike = Math.random() < 0.4; //probability of a spike spawning on a platform
+    newPlatform.spikeOffset = random(0.1, Math.max(w - 0.1, 0.1)); //avoids putting a spike directly on the edge of a platform
     platforms.push(newPlatform);
     const gap = random(2, 3);
     x += w + gap;
@@ -533,8 +533,8 @@ function updatePlatforms() {
     const h = 3 + random(-1, 2);
     const gap = random(2, 3);
     const newPlatform = new Platform(last.x + last.width + gap, 0, w, h);
-    newPlatform.hasSpike = Math.random() < 0.4;
-    newPlatform.spikeOffset = random(0.1, Math.max(w - 0.1, 0.1));
+    newPlatform.hasSpike = Math.random() < 0.4; //probability of a spike spawning on a platform
+    newPlatform.spikeOffset = random(0.1, Math.max(w - 0.1, 0.1)); //avoids putting a spike directly on the edge of a platform
     platforms.push(newPlatform);
   }
   //remove platforms that are off-screen
