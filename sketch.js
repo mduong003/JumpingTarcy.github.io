@@ -24,8 +24,12 @@ let ease = 0.08
 
 // game variable
 let score = -1;
+let bestScore = 0;
 let scoreBoard;
 let scoreText;
+let scoreBoard2;
+let bestScoreText;
+
 
 //platform
 class Platform {
@@ -100,8 +104,13 @@ function preload() {
 }
 
 async function setup() {
+  //score
   scoreBoard = document.getElementById("scoreboard")
   scoreText = document.getElementById("score")
+  scoreBoard2 = document.getElementById("scoreboard2")
+  bestScoreText = document.getElementById("bestScore")
+  bestScore = getItem('bestScore') ?? 0; //get the current best store, 0 if null
+
   createCanvas(windowWidth, windowHeight, WEBGL);
   gl = drawingContext; //grab the WebGL context from p5.js
   texturedShader = initShader(vertexSrc, fragmentSrc);
@@ -127,6 +136,7 @@ function draw() {
   if (showSplash) {
     splashScreen();
     scoreBoard.style.display = "none";
+    scoreBoard2.style.display = "none";
     return;
   }
 
@@ -169,6 +179,7 @@ function draw() {
   updatePlatforms();
 
   if (scoreText) scoreText.innerText = `${score}`
+  if (bestScoreText) bestScoreText.innerText = `${bestScore}`
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); //clear the screen to default color
   gl.enable(gl.DEPTH_TEST);
@@ -473,6 +484,10 @@ function checkCollision() {
 
   // if player falls below screen or hits the spikes, reset position and respawn platforms randomly
   if (playerY < -10 || hitSpike) {
+    if (score > bestScore) {
+      bestScore = score;
+      storeItem('bestScore', bestScore); //save the best store from previous plays
+    }
     playerY = 5;
     velocityX = 0;
     velocityY = 0;
@@ -490,6 +505,7 @@ function mousePressed() {
     showSplash = false;
   }
   scoreBoard.style.display = "block";
+  scoreBoard2.style.display = "block";
   userStartAudio();
 }
 
