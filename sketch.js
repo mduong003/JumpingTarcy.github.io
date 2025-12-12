@@ -129,8 +129,9 @@ function draw() {
   volume += (v - volume) * ease;
   
   // horizontal movement
-  if (volume > 0.02){
-    velocityX += volume * 0.2;
+  // if (volume > 0.02){ only uncomment this when on a laptop with a bad mic
+  if (volume > 0.01){
+    velocityX += volume * 0.05;
   }
   else{
     if (isOnGround){
@@ -150,15 +151,16 @@ function draw() {
   }
 
   // vertical movement
-  if (volume > 0.02){
+  // if (volume > 0.02){ only uncomment this when on a laptop with a bad mic
+  if (volume > 0.01){
     velocityY = min(volume * 10, 0.35);
   }
   else{
-    velocityY = -0.45;
+    velocityY = -0.15;
   }
 
   playerY += velocityY;
-  playerY = constrain(playerY, -11, 4.5);
+  playerY = constrain(playerY, -13, 4);
 
   isOnGround = false;
   checkCollision();
@@ -410,6 +412,9 @@ function checkCollision(){
     playerX = -8;
     score = 0;
     maxX = -8;
+
+    platforms = [];
+    initPlatforms();
   }
 }
 
